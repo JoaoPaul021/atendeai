@@ -1,45 +1,114 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 type Cliente = {
   id: number;
   nome: string;
   email: string;
+  created_at: string;
 };
 
 export default function ClientesPage() {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    let ignore = false;
 
-    if (!nome.trim() || !email.trim()) {
-      return;
+    async function carregarClientes() {
+      try {
+        const response = await fetch("/api/clientes");
+
+        if (!response.ok) {
+          throw new Error("Erro ao carregar clientes.");
+        }
+
+        const data: Cliente[] = await response.json();
+
+        if (!ignore) {
+          setClientes(data);
+        }
+      } catch {
+        if (!ignore) {
+          setErro("Não foi possível carregar os clientes.");
+        }
+      } finally {
+        if (!ignore) {
+          setCarregando(false);
+        }
+      }
     }
 
-    const novoCliente: Cliente = {
-      id: Date.now(),
-      nome: nome.trim(),
-      email: email.trim(),
+    carregarClientes();
+
+    return () => {
+      ignore = true;
     };
+  }, []);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault();
+
+  if (!nome.trim() || !email.trim()) {
+    return;
+  }
+
+  setErro("");
+
+  try {
+    const response = await fetch("/api/clientes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        nome,
+        email,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Erro ao cadastrar cliente.");
+    }
+
+    const novoCliente: Cliente = await response.json();
 
     setClientes((clientesAtuais) => [
-      ...clientesAtuais,
       novoCliente,
+      ...clientesAtuais,
     ]);
 
     setNome("");
     setEmail("");
+  } catch {
+      setErro("Não foi possível cadastrar o cliente.");
+    }
   }
 
-  function handleDelete(id: number) {
-    setClientes((clientesAtuais) =>
-      clientesAtuais.filter((cliente) => cliente.id !== id)
-    );
+  async function handleDelete(id: number) {
+    setErro("");
+
+    try {
+      const response = await fetch(`/api/clientes/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao excluir cliente.");
+      }
+
+      setClientes((clientesAtuais) =>
+        clientesAtuais.filter((cliente) => cliente.id !== id)
+      );
+    } catch {
+      setErro("Não foi possível excluir o cliente.");
+    }
   }
+
 
   return (
     <main className="p-8">
@@ -85,7 +154,17 @@ export default function ClientesPage() {
             Clientes cadastrados
           </h2>
 
-          {clientes.length === 0 ? (
+          {erro && (
+            <p className="mt-4 text-sm text-red-400">
+              {erro}
+            </p>
+          )}
+
+          {carregando ? (
+            <p className="mt-4 text-zinc-400">
+              Carregando clientes...
+            </p>
+          ) : clientes.length === 0 ? (
             <p className="mt-4 text-zinc-400">
               Nenhum cliente cadastrado.
             </p>
