@@ -15,6 +15,11 @@ export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [clienteEditandoId, setClienteEditandoId] =
+  useState<number | null>(null);
+
+  const [nomeEditando, setNomeEditando] = useState("");
+  const [emailEditando, setEmailEditando] = useState("");
 
   useEffect(() => {
     let ignore = false;
@@ -109,7 +114,59 @@ export default function ClientesPage() {
     }
   }
 
+  function handleIniciarEdicao(cliente: Cliente) {
+    setClienteEditandoId(cliente.id);
+    setNomeEditando(cliente.nome);
+    setEmailEditando(cliente.email);
+  }
 
+  function handleCancelarEdicao() {
+    setClienteEditandoId(null);
+    setNomeEditando("");
+    setEmailEditando("");
+  }
+
+  async function handleSalvarEdicao(id: number) {
+    if (!nomeEditando.trim() || !emailEditando.trim()) {
+      setErro("Nome e email são obrigatórios.");
+      return;
+    }
+
+    setErro("");
+
+    try {
+      const response = await fetch(`/api/clientes/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nome: nomeEditando,
+          email: emailEditando,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao atualizar cliente.");
+      }
+
+      const clienteAtualizado: Cliente =
+        await response.json();
+
+      setClientes((clientesAtuais) =>
+        clientesAtuais.map((cliente) =>
+          cliente.id === id
+            ? clienteAtualizado
+            : cliente
+        )
+      );
+
+      handleCancelarEdicao();
+    } catch {
+      setErro("Não foi possível atualizar o cliente.");
+    }
+  }
+  
   return (
     <main className="p-8">
       <div className="mx-auto max-w-6xl">
@@ -173,25 +230,74 @@ export default function ClientesPage() {
               {clientes.map((cliente) => (
                 <div
                   key={cliente.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900 p-4"
+                  className="rounded-lg border border-zinc-800 bg-zinc-900 p-4"
                 >
-                <div>
-                  <p className="font-medium">
-                    {cliente.nome}
-                  </p>
+                  {clienteEditandoId === cliente.id ? (
+                    <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+                      <input
+                        type="text"
+                        value={nomeEditando}
+                        onChange={(event) =>
+                          setNomeEditando(event.target.value)
+                        }
+                        className="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 outline-none"
+                      />
 
-                  <p className="text-sm text-zinc-400">
-                    {cliente.email}
-                  </p>
+                      <input
+                        type="email"
+                        value={emailEditando}
+                        onChange={(event) =>
+                          setEmailEditando(event.target.value)
+                        }
+                        className="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 outline-none"
+                      />
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSalvarEdicao(cliente.id)}
+                          className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black hover:bg-zinc-200"
+                        >
+                          Salvar
+                        </button>
+
+                        <button
+                          onClick={handleCancelarEdicao}
+                          className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">
+                          {cliente.nome}
+                        </p>
+
+                        <p className="text-sm text-zinc-400">
+                          {cliente.email}
+                        </p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleIniciarEdicao(cliente)}
+                          className="rounded-md border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
+                        >
+                          Editar
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(cliente.id)}
+                          className="rounded-md border border-red-900 px-3 py-2 text-sm text-red-400 hover:bg-red-950"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-
-                <button
-                  onClick={() => handleDelete(cliente.id)}
-                  className="rounded-md border border-red-900 px-3 py-2 text-sm text-red-400 hover:bg-red-950"
-                >
-                  Excluir
-                </button>
-            </div>
               ))}
             </div>
           )}

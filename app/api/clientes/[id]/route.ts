@@ -38,3 +38,53 @@ export async function DELETE(
     { message: "Cliente excluído com sucesso." }
   );
 }
+
+export async function PATCH(
+  request: Request,
+  context: Context
+) {
+  const { id } = await context.params;
+
+  const clienteId = Number(id);
+
+  if (Number.isNaN(clienteId)) {
+    return NextResponse.json(
+      { error: "ID inválido." },
+      { status: 400 }
+    );
+  }
+
+  const body = await request.json();
+
+  const nome =
+    typeof body.nome === "string" ? body.nome.trim() : "";
+
+  const email =
+    typeof body.email === "string" ? body.email.trim() : "";
+
+  if (!nome || !email) {
+    return NextResponse.json(
+      { error: "Nome e email são obrigatórios." },
+      { status: 400 }
+    );
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("clientes")
+    .update({
+      nome,
+      email,
+    })
+    .eq("id", clienteId)
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json(
+      { error: "Erro ao atualizar cliente." },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json(data);
+}
