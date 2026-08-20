@@ -8,12 +8,17 @@ type Cliente = {
   email: string;
 };
 
+type StatusAtendimento =
+  | "pendente"
+  | "em_andamento"
+  | "concluido";
+
 type Atendimento = {
   id: number;
   cliente_id: number;
   assunto: string;
   descricao: string;
-  status: string;
+  status: StatusAtendimento;
   created_at: string;
   cliente: Cliente;
 };
@@ -136,6 +141,52 @@ export default function AtendimentosPage() {
     }
   }
 
+  async function handleStatusChange(
+    id: number,
+    novoStatus: StatusAtendimento
+  ) {
+    setErro("");
+
+    try {
+      const response = await fetch(
+        `/api/atendimentos/${id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: novoStatus,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Erro ao atualizar atendimento."
+        );
+      }
+
+      const atendimentoAtualizado =
+        await response.json();
+
+      setAtendimentos((atendimentosAtuais) =>
+        atendimentosAtuais.map((atendimento) =>
+          atendimento.id === id
+            ? {
+                ...atendimento,
+                status: atendimentoAtualizado.status,
+              }
+            : atendimento
+        )
+      );
+    } catch {
+      setErro(
+        "Não foi possível atualizar o status."
+      );
+    }
+  }
+
   return (
     <main className="p-8">
       <div className="mx-auto max-w-6xl">
@@ -239,9 +290,28 @@ export default function AtendimentosPage() {
                       </p>
                     </div>
 
-                    <span className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300">
-                      {atendimento.status}
-                    </span>
+                    <select
+                      value={atendimento.status}
+                      onChange={(event) =>
+                        handleStatusChange(
+                          atendimento.id,
+                          event.target.value as StatusAtendimento
+                        )
+                      }
+                      className="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300"
+                    >
+                      <option value="pendente">
+                        Pendente
+                      </option>
+
+                      <option value="em_andamento">
+                        Em andamento
+                      </option>
+
+                      <option value="concluido">
+                        Concluído
+                      </option>
+                    </select>
                   </div>
 
                   <p className="mt-4 text-zinc-300">
