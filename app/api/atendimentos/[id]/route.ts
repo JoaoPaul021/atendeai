@@ -54,3 +54,35 @@ export async function PATCH(
 
   return NextResponse.json(data);
 }
+
+export async function DELETE(
+  request: Request,
+  context: Context
+) {
+  const { id } = await context.params;
+
+  const atendimentoId = Number(id);
+
+  if (Number.isNaN(atendimentoId)) {
+    return NextResponse.json(
+      { error: "ID inválido." },
+      { status: 400 }
+    );
+  }
+
+  const { error } = await supabaseAdmin
+    .from("atendimentos")
+    .delete()
+    .eq("id", atendimentoId);
+
+  if (error) {
+    return NextResponse.json(
+      { error: "Erro ao excluir atendimento." },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({
+    message: "Atendimento excluído com sucesso.",
+  });
+}

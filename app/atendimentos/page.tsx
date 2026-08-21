@@ -187,6 +187,43 @@ export default function AtendimentosPage() {
     }
   }
 
+  async function handleDeleteAtendimento(id: number) {
+    const confirmou = window.confirm(
+      "Deseja realmente excluir este atendimento?"
+    );
+
+    if (!confirmou) {
+      return;
+    }
+
+    setErro("");
+
+    try {
+      const response = await fetch(
+        `/api/atendimentos/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Erro ao excluir atendimento."
+        );
+      }
+
+      setAtendimentos((atendimentosAtuais) =>
+        atendimentosAtuais.filter(
+          (atendimento) => atendimento.id !== id
+        )
+      );
+    } catch {
+      setErro(
+        "Não foi possível excluir o atendimento."
+      );
+    }
+  }
+
   return (
     <main className="p-8">
       <div className="mx-auto max-w-6xl">
@@ -290,28 +327,39 @@ export default function AtendimentosPage() {
                       </p>
                     </div>
 
-                    <select
-                      value={atendimento.status}
-                      onChange={(event) =>
-                        handleStatusChange(
-                          atendimento.id,
-                          event.target.value as StatusAtendimento
-                        )
-                      }
-                      className="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300"
-                    >
-                      <option value="pendente">
-                        Pendente
-                      </option>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={atendimento.status}
+                        onChange={(event) =>
+                          handleStatusChange(
+                            atendimento.id,
+                            event.target.value as StatusAtendimento
+                          )
+                        }
+                        className="rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-300"
+                      >
+                        <option value="pendente">
+                          Pendente
+                        </option>
 
-                      <option value="em_andamento">
-                        Em andamento
-                      </option>
+                        <option value="em_andamento">
+                          Em andamento
+                        </option>
 
-                      <option value="concluido">
-                        Concluído
-                      </option>
-                    </select>
+                        <option value="concluido">
+                          Concluído
+                        </option>
+                      </select>
+
+                      <button
+                        onClick={() =>
+                          handleDeleteAtendimento(atendimento.id)
+                        }
+                        className="rounded-md border border-red-900 px-3 py-2 text-sm text-red-400 hover:bg-red-950"
+                      >
+                        Excluir
+                      </button>
+                    </div>
                   </div>
 
                   <p className="mt-4 text-zinc-300">
