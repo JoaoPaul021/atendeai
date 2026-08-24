@@ -76,11 +76,15 @@ export default function ClientesPage() {
       }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error("Erro ao cadastrar cliente.");
+      throw new Error(
+        data.error || "Erro ao cadastrar cliente."
+      );
     }
 
-    const novoCliente: Cliente = await response.json();
+    const novoCliente: Cliente = data;
 
     setClientes((clientesAtuais) => [
       novoCliente,
@@ -89,9 +93,15 @@ export default function ClientesPage() {
 
     setNome("");
     setEmail("");
-  } catch {
-      setErro("Não foi possível cadastrar o cliente.");
+  } catch (error) {
+    if (error instanceof Error) {
+      setErro(error.message);
+    } else {
+      setErro(
+        "Não foi possível cadastrar o cliente."
+      );
     }
+  }
   }
 
   async function handleDelete(id: number) {
@@ -164,12 +174,15 @@ export default function ClientesPage() {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Erro ao atualizar cliente.");
+        throw new Error(
+          data.error || "Erro ao atualizar cliente."
+        );
       }
 
-      const clienteAtualizado: Cliente =
-        await response.json();
+      const clienteAtualizado: Cliente = data;
 
       setClientes((clientesAtuais) =>
         clientesAtuais.map((cliente) =>
@@ -180,8 +193,14 @@ export default function ClientesPage() {
       );
 
       handleCancelarEdicao();
-    } catch {
-      setErro("Não foi possível atualizar o cliente.");
+    } catch (error) {
+      if (error instanceof Error) {
+        setErro(error.message);
+      } else {
+        setErro(
+          "Não foi possível atualizar o cliente."
+        );
+      }
     }
   }
   

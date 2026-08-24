@@ -90,6 +90,15 @@ export async function PATCH(
     .single();
 
   if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json(
+        {
+          error: "Já existe um cliente com este e-mail.",
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Erro ao atualizar cliente." },
       { status: 500 }
