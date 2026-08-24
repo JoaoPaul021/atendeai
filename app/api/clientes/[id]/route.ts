@@ -28,15 +28,25 @@ export async function DELETE(
     .eq("id", clienteId);
 
   if (error) {
+    if (error.code === "23503") {
+      return NextResponse.json(
+        {
+          error:
+            "Este cliente possui atendimentos vinculados e não pode ser excluído.",
+        },
+        { status: 409 }
+      );
+    }
+
     return NextResponse.json(
       { error: "Erro ao excluir cliente." },
       { status: 500 }
     );
   }
 
-  return NextResponse.json(
-    { message: "Cliente excluído com sucesso." }
-  );
+  return NextResponse.json({
+    message: "Cliente excluído com sucesso.",
+  });
 }
 
 export async function PATCH(

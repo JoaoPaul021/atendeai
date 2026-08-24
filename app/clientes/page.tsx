@@ -95,6 +95,14 @@ export default function ClientesPage() {
   }
 
   async function handleDelete(id: number) {
+    const confirmou = window.confirm(
+      "Deseja realmente excluir este cliente?"
+    );
+
+    if (!confirmou) {
+      return;
+    }
+
     setErro("");
 
     try {
@@ -102,15 +110,25 @@ export default function ClientesPage() {
         method: "DELETE",
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Erro ao excluir cliente.");
+        throw new Error(
+          data.error || "Erro ao excluir cliente."
+        );
       }
 
       setClientes((clientesAtuais) =>
-        clientesAtuais.filter((cliente) => cliente.id !== id)
+        clientesAtuais.filter(
+          (cliente) => cliente.id !== id
+        )
       );
-    } catch {
-      setErro("Não foi possível excluir o cliente.");
+    } catch (error) {
+      if (error instanceof Error) {
+        setErro(error.message);
+      } else {
+        setErro("Não foi possível excluir o cliente.");
+      }
     }
   }
 
