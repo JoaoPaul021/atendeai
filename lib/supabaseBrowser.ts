@@ -1,18 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-const supabasePublishableKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-if (!supabaseUrl || !supabasePublishableKey) {
-  throw new Error(
-    "Variáveis públicas do Supabase não configuradas."
-  );
-}
-
-export const supabaseBrowser = createClient(
-  supabaseUrl,
-  supabasePublishableKey
+export const supabaseBrowser = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 );

@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -10,6 +11,8 @@ export default function LoginPage() {
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [carregando, setCarregando] = useState(false);
+
+  const router = useRouter();
 
   async function handleLogin(
     event: FormEvent<HTMLFormElement>
@@ -34,6 +37,9 @@ export default function LoginPage() {
 
     setMensagem("Login realizado com sucesso.");
     setCarregando(false);
+
+    router.replace("/");
+    router.refresh();
   }
 
   async function handleCadastro() {
