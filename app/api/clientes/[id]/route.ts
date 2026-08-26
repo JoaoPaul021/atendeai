@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 type Context = {
   params: Promise<{
@@ -56,6 +56,20 @@ export async function PATCH(
   const { id } = await context.params;
 
   const clienteId = Number(id);
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: authData, error: authError } =
+    await supabase.auth.getClaims();
+
+  const userId = authData?.claims?.sub;
+
+  if (authError || !userId) {
+    return NextResponse.json(
+      { error: "Não autorizado." },
+      { status: 401 }
+    );
+  }
 
   if (Number.isNaN(clienteId)) {
     return NextResponse.json(
