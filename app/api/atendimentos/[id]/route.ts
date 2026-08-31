@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 type Context = {
   params: Promise<{
@@ -17,8 +17,21 @@ export async function PATCH(
   request: Request,
   context: Context
 ) {
-  const { id } = await context.params;
+  const supabase = await createSupabaseServerClient();
 
+  const { data: authData, error: authError } =
+    await supabase.auth.getClaims();
+
+  const userId = authData?.claims?.sub;
+
+  if (authError || !userId) {
+    return NextResponse.json(
+      { error: "Não autorizado." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
   const atendimentoId = Number(id);
 
   if (Number.isNaN(atendimentoId)) {
@@ -38,17 +51,27 @@ export async function PATCH(
     );
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("atendimentos")
-    .update({ status })
+    .update({
+      status,
+    })
     .eq("id", atendimentoId)
+    .eq("user_id", userId)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json(
       { error: "Erro ao atualizar atendimento." },
       { status: 500 }
+    );
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { error: "Atendimento não encontrado." },
+      { status: 404 }
     );
   }
 
@@ -59,8 +82,21 @@ export async function DELETE(
   request: Request,
   context: Context
 ) {
-  const { id } = await context.params;
+  const supabase = await createSupabaseServerClient();
 
+  const { data: authData, error: authError } =
+    await supabase.auth.getClaims();
+
+  const userId = authData?.claims?.sub;
+
+  if (authError || !userId) {
+    return NextResponse.json(
+      { error: "Não autorizado." },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await context.params;
   const atendimentoId = Number(id);
 
   if (Number.isNaN(atendimentoId)) {
@@ -70,15 +106,25 @@ export async function DELETE(
     );
   }
 
-  const { error } = await supabaseAdmin
+  const { data, error } = await supabase
     .from("atendimentos")
     .delete()
-    .eq("id", atendimentoId);
+    .eq("id", atendimentoId)
+    .eq("user_id", userId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return NextResponse.json(
       { error: "Erro ao excluir atendimento." },
       { status: 500 }
+    );
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { error: "Atendimento não encontrado." },
+      { status: 404 }
     );
   }
 

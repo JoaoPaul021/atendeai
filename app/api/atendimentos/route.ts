@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { createSupabaseServerClient } from "@/lib/supabaseServer";
 
 export async function GET() {
-  const { data, error } = await supabaseAdmin
+  const supabase = await createSupabaseServerClient();
+
+  const { data: authData, error: authError } =
+    await supabase.auth.getClaims();
+
+  const userId = authData?.claims?.sub;
+
+  if (authError || !userId) {
+    return NextResponse.json(
+      { error: "Não autorizado." },
+      { status: 401 }
+    );
+  }
+
+  const { data, error } = await supabase
     .from("atendimentos")
     .select(`
       id,
@@ -17,7 +31,10 @@ export async function GET() {
         email
       )
     `)
-    .order("created_at", { ascending: false });
+    .eq("user_id", userId)
+    .order("created_at", {
+      ascending: false,
+    });
 
   if (error) {
     return NextResponse.json(
@@ -30,9 +47,24 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const supabase = await createSupabaseServerClient();
+
+  const { data: authData, error: authError } =
+    await supabase.auth.getClaims();
+
+  const userId = authData?.claims?.sub;
+
+  if (authError || !userId) {
+    return NextResponse.json(
+      { error: "Não autorizado." },
+      { status: 401 }
+    );
+  }
+
   const body = await request.json();
 
   const clienteId = Number(body.cliente_id);
+
   const assunto =
     typeof body.assunto === "string"
       ? body.assunto.trim()
@@ -57,12 +89,35 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data: cliente, error: clienteError } =
+    await supabase
+      .from("clientes")
+      .select("id")
+      .eq("id", clienteId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+  if (clienteError) {
+    return NextResponse.json(
+      { error: "Erro ao verificar cliente." },
+      { status: 500 }
+    );
+  }
+
+  if (!cliente) {
+    return NextResponse.json(
+      { error: "Cliente não encontrado." },
+      { status: 404 }
+    );
+  }
+
+  const { data, error } = await supabase
     .from("atendimentos")
     .insert({
       cliente_id: clienteId,
       assunto,
       descricao,
+      user_id: userId,
     })
     .select()
     .single();
