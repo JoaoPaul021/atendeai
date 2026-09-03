@@ -21,6 +21,14 @@ type Atendimento = {
   status: StatusAtendimento;
   created_at: string;
   cliente: Cliente;
+
+  resumo_ia: string | null;
+  categoria_ia: string | null;
+  prioridade_ia:
+    | "baixa"
+    | "media"
+    | "alta"
+    | null;
 };
 
 type AnaliseIA = {
@@ -75,6 +83,32 @@ export default function AtendimentosPage() {
         if (!ignore) {
           setClientes(clientesData);
           setAtendimentos(atendimentosData);
+
+          const analisesSalvas =
+            atendimentosData.reduce<
+              Record<number, AnaliseIA>
+            >((resultado, atendimento) => {
+              if (
+                atendimento.resumo_ia &&
+                atendimento.categoria_ia &&
+                atendimento.prioridade_ia
+              ) {
+                resultado[atendimento.id] = {
+                  resumo:
+                    atendimento.resumo_ia,
+
+                  categoria:
+                    atendimento.categoria_ia,
+
+                  prioridade:
+                    atendimento.prioridade_ia,
+                };
+              }
+
+              return resultado;
+            }, {});
+
+          setAnalises(analisesSalvas);
         }
       } catch {
         if (!ignore) {
@@ -283,13 +317,14 @@ export default function AtendimentosPage() {
         "/api/ia/analisar",
         {
           method: "POST",
+
           headers: {
             "Content-Type":
               "application/json",
           },
+
           body: JSON.stringify({
-            assunto: atendimento.assunto,
-            descricao: atendimento.descricao,
+            atendimento_id: atendimento.id,
           }),
         }
       );
@@ -305,8 +340,34 @@ export default function AtendimentosPage() {
 
       setAnalises((analisesAtuais) => ({
         ...analisesAtuais,
-        [atendimento.id]: data,
+
+        [atendimento.id]: {
+          resumo: data.resumo,
+          categoria: data.categoria,
+          prioridade: data.prioridade,
+        },
       }));
+
+      setAtendimentos(
+        (atendimentosAtuais) =>
+          atendimentosAtuais.map(
+            (item) =>
+              item.id === atendimento.id
+                ? {
+                    ...item,
+
+                    resumo_ia:
+                      data.resumo,
+
+                    categoria_ia:
+                      data.categoria,
+
+                    prioridade_ia:
+                      data.prioridade,
+                  }
+                : item
+          )
+      );
     } catch (error) {
       if (error instanceof Error) {
         setErro(error.message);

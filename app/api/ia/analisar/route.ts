@@ -7,7 +7,8 @@ const ai = new GoogleGenAI({
 });
 
 export async function POST(request: Request) {
-  const supabase = await createSupabaseServerClient();
+  const supabase =
+    await createSupabaseServerClient();
 
   const { data: authData, error: authError } =
     await supabase.auth.getClaims();
@@ -23,23 +24,50 @@ export async function POST(request: Request) {
 
   const body = await request.json();
 
-  const assunto =
-    typeof body.assunto === "string"
-      ? body.assunto.trim()
-      : "";
+  const atendimentoId = Number(
+    body.atendimento_id
+  );
 
-  const descricao =
-    typeof body.descricao === "string"
-      ? body.descricao.trim()
-      : "";
+  if (Number.isNaN(atendimentoId)) {
+    return NextResponse.json(
+      { error: "ID do atendimento inválido." },
+      { status: 400 }
+    );
+  }
 
-  if (!assunto || !descricao) {
+  /*
+   * Busca o atendimento no banco.
+   *
+   * Além do ID precisar existir, ele precisa
+   * pertencer ao usuário autenticado.
+   */
+  const {
+    data: atendimento,
+    error: atendimentoError,
+  } = await supabase
+    .from("atendimentos")
+    .select("id, assunto, descricao")
+    .eq("id", atendimentoId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (atendimentoError) {
     return NextResponse.json(
       {
         error:
-          "Assunto e descrição são obrigatórios.",
+          "Erro ao buscar o atendimento.",
       },
-      { status: 400 }
+      { status: 500 }
+    );
+  }
+
+  if (!atendimento) {
+    return NextResponse.json(
+      {
+        error:
+          "Atendimento não encontrado.",
+      },
+      { status: 404 }
     );
   }
 
@@ -55,10 +83,10 @@ export async function POST(request: Request) {
 Analise o seguinte atendimento.
 
 Assunto:
-${assunto}
+${atendimento.assunto}
 
 Descrição:
-${descricao}
+${atendimento.descricao}
 
 Determine:
 - um resumo curto;
@@ -69,6 +97,7 @@ Determine:
         response_format: {
           type: "text",
           mime_type: "application/json",
+
           schema: {
             type: "object",
 
@@ -110,7 +139,70 @@ Determine:
       interaction.output_text
     );
 
-    return NextResponse.json(analise);
+    const prioridadesPermitidas = [
+      "baixa",
+      "media",
+      "alta",
+    ];
+
+    if (
+      typeof analise.resumo !== "string" ||
+      typeof analise.categoria !== "string" ||
+      !prioridadesPermitidas.includes(
+        analise.prioridade
+      )
+    ) {
+      throw new Error(
+        "Resposta inválida da IA."
+      );
+    }
+
+    /*
+     * Salva a análise no PostgreSQL.
+     */
+    const {
+      data: atendimentoAtualizado,
+      error: updateError,
+    } = await supabase
+      .from("atendimentos")
+      .update({
+        resumo_ia: analise.resumo,
+        categoria_ia: analise.categoria,
+        prioridade_ia: analise.prioridade,
+      })
+      .eq("id", atendimentoId)
+      .eq("user_id", userId)
+      .select(
+        `
+        resumo_ia,
+        categoria_ia,
+        prioridade_ia
+        `
+      )
+      .single();
+
+    if (updateError) {
+      console.error(updateError);
+
+      return NextResponse.json(
+        {
+          error:
+            "A análise foi gerada, mas não pôde ser salva.",
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      resumo:
+        atendimentoAtualizado.resumo_ia,
+
+      categoria:
+        atendimentoAtualizado.categoria_ia,
+
+      prioridade:
+        atendimentoAtualizado.prioridade_ia,
+    });
   } catch (error) {
     console.error(error);
 

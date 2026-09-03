@@ -25,6 +25,9 @@ export async function GET() {
       status,
       created_at,
       cliente_id,
+      resumo_ia,
+      categoria_ia,
+      prioridade_ia,
       cliente:clientes (
         id,
         nome,
